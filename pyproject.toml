@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "douyin-to-text"
+version = "0.1.0"
+description = "Extract speech-to-text from Douyin/TikTok videos. Agent-native CLI tool."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [{name = "lemon"}]
+keywords = ["douyin", "tiktok", "speech-to-text", "asr", "transcription", "agent", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "click>=8.0",
+    "yt-dlp>=2024.0",
+]
+
+[project.optional-dependencies]
+sensevoice = ["funasr>=1.0", "onnxruntime>=1.16"]
+whisper = ["faster-whisper>=1.0"]
+all = ["funasr>=1.0", "onnxruntime>=1.16", "faster-whisper>=1.0"]
+dev = ["pytest>=7.0", "pytest-cov"]
+
+[project.scripts]
+douyin-to-text = "douyin_to_text.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/lemon/douyin-to-text"
+Repository = "https://github.com/lemon/douyin-to-text"
+Issues = "https://github.com/lemon/douyin-to-text/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
