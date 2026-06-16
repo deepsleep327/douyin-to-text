@@ -19,7 +19,8 @@ _LANG_MAP: dict[str, str] = {
     "yue": "yue",
 }
 
-MODEL_ID = "iic/SenseVoiceSmall"
+import os
+MODEL_ID = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "models", "SenseVoiceSmall")
 
 
 class SenseVoiceEngine(ASREngine):
@@ -36,7 +37,7 @@ class SenseVoiceEngine(ASREngine):
 
     @property
     def priority(self) -> int:  # noqa: D401
-        return 100
+        return 50
 
     def is_available(self) -> bool:
         """Check that ``funasr`` and ``onnxruntime`` are importable."""
@@ -62,40 +63,64 @@ class SenseVoiceEngine(ASREngine):
         lang = _LANG_MAP.get(language, "auto")
 
         logger.info(
-            "Transcribing %s with SenseVoice (lang=%s)", audio_path, lang
+            "Transcribing %s with SenseVoice (lang=%s, chunked)", audio_path, lang
         )
         t0 = time.monotonic()
 
-        results = model.generate(
-            input=audio_path,
-            cache={},
-            language=lang,
-            use_itn=True,
-            batch_size_s=60,
-        )
-        elapsed = time.monotonic() - t0
+        try:
+            from pydub import AudioSegment
+            import tempfile
+            audio = AudioSegment.from_file(audio_path)
+            chunk_length_ms = 30000  # 30 seconds
+            chunks = [audio[i:i + chunk_length_ms] for i in range(0, len(audio), chunk_length_ms)]
+        except Exception as e:
+            logger.warning("Could not chunk audio with pydub (%s), falling back to full audio.", e)
+            chunks = [None]
 
         segments: list[Segment] = []
         full_texts: list[str] = []
 
-        for item in results:
-            text: str = item.get("text", "")
-            full_texts.append(text)
+        for i, chunk in enumerate(chunks):
+            if chunk is not None:
+                tmp_fd, tmp_path = tempfile.mkstemp(suffix=".wav")
+                os.close(tmp_fd)
+                chunk.export(tmp_path, format="wav")
+                input_path = tmp_path
+            else:
+                input_path = audio_path
+                tmp_path = None
 
-            # FunASR may return timestamp info depending on model/config.
-            if "timestamp" in item:
-                for ts_pair, seg_text in zip(
-                    item["timestamp"], item.get("text_seg", [text])
-                ):
-                    segments.append(
-                        Segment(
-                            start=ts_pair[0] / 1000.0,
-                            end=ts_pair[1] / 1000.0,
-                            text=seg_text.strip(),
+            try:
+                results = model.generate(
+                    input=input_path,
+                    cache={},
+                    language=lang,
+                    use_itn=True,
+                    batch_size_s=60,
+                )
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+
+            time_offset = i * (30000 / 1000.0) if chunk is not None else 0.0
+
+            for item in results:
+                text: str = item.get("text", "")
+                full_texts.append(text)
+
+                if "timestamp" in item:
+                    for ts_pair, seg_text in zip(
+                        item["timestamp"], item.get("text_seg", [text])
+                    ):
+                        segments.append(
+                            Segment(
+                                start=(ts_pair[0] / 1000.0) + time_offset,
+                                end=(ts_pair[1] / 1000.0) + time_offset,
+                                text=seg_text.strip(),
+                            )
                         )
-                    )
 
-        detected_lang = language if language != "auto" else "zh"
+        elapsed = time.monotonic() - t0
         full_text = " ".join(full_texts).strip()
 
         logger.info(

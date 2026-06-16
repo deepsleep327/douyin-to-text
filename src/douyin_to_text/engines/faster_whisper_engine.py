@@ -41,7 +41,7 @@ class FasterWhisperEngine(ASREngine):
 
     @property
     def priority(self) -> int:  # noqa: D401
-        return 50
+        return 100
 
     def is_available(self) -> bool:
         """Check that ``faster_whisper`` is importable."""

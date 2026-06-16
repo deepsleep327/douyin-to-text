@@ -93,10 +93,9 @@ def main() -> None:
 )
 @click.option(
     "--model-size",
-    type=click.Choice(["small", "base", "large"], case_sensitive=False),
-    default="small",
-    show_default=True,
-    help="Model size.",
+    type=click.Choice(["tiny", "base", "small", "medium", "large-v3-turbo"]),
+    default="base",
+    help="Whisper model size (only applies to whisper engine).",
 )
 @click.option(
     "--output-file",
@@ -148,13 +147,14 @@ def transcribe(  # noqa: WPS211 — many args by design (CLI surface)
     try:
         # Late imports so the top-level CLI loads fast even when heavy deps
         # (torch, onnxruntime, …) are installed.
-        from douyin_to_text.transcriber import run_transcription  # type: ignore[import-untyped]
+        from douyin_to_text.transcriber import transcribe_url  # type: ignore[import-untyped]
 
-        result = run_transcription(
+        result = transcribe_url(
             url=url,
             engine=engine,
             language=language,
             model_size=model_size,
+            fmt=output_format,
             keep_audio=keep_audio,
             temp_dir=temp_dir,
         )
@@ -165,10 +165,7 @@ def transcribe(  # noqa: WPS211 — many args by design (CLI surface)
         _emit_error(str(exc))
 
     # --- format & emit ---------------------------------------------------
-    try:
-        output = _format_result(result, output_format)
-    except Exception as exc:  # noqa: BLE001
-        _emit_error(f"Formatting failed: {exc}")
+    output = result
 
     if output_file is not None:
         output_file.parent.mkdir(parents=True, exist_ok=True)

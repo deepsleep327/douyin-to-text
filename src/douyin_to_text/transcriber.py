@@ -66,7 +66,7 @@ def _get_engine(engine_name: str, model_size: str) -> ASREngine:
 
     if engine_name in ("auto", "faster-whisper"):
         try:
-            from .engines.faster_whisper import FasterWhisperEngine  # type: ignore[import-not-found]
+            from .engines.faster_whisper_engine import FasterWhisperEngine  # type: ignore[import-not-found]
 
             eng = FasterWhisperEngine(model_size=model_size)
             if eng.is_available():

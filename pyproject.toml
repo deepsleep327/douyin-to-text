@@ -21,6 +21,7 @@ classifiers = [
 dependencies = [
     "click>=8.0",
     "yt-dlp>=2024.0",
+    "pydub>=0.25.0",
 ]
 
 [project.optional-dependencies]

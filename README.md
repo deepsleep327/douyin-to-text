@@ -1,178 +1,66 @@
-# 🎙️ douyin-to-text
+# Douyin-to-Text 🚀
 
-> 从抖音/TikTok 视频提取语音文字 — Agent-Native CLI 工具
+> ⚡ **Agent-Native CLI 工具**：一键提取抖音 (Douyin/TikTok) 视频文案，自动转写为结构化 Markdown/JSON，专为 AI Agent、RAG 知识库与本地工作流设计。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+## 🌟 特性 (Features)
 
-**douyin-to-text** 是一个专为 AI Agent 设计的命令行工具，从抖音视频链接中提取语音内容并转为结构化文字。
+- **一键提取**：丢入任意抖音分享链接（如 `v.douyin.com/xxx` 或网页版链接），自动解析、下载音频、剥离提取。
+- **纯本地推理 (Local First)**：无需调用任何外部大模型 API，保护隐私，拒绝网络超量收费。
+- **专为低配优化**：深度适配普通 CPU，无需昂贵的独立显卡。
+- **结构化输出**：自动排版为带有元数据（标题、时长、作者）的 Markdown 或 JSON，无缝对接 Obsidian 和 Agent。
+- **双擎驱动 (Dual Engines)**：
+  - `faster-whisper` (默认)：内置 VAD（静音过滤算法），超长视频**绝不吞字**，`base` 模型兼顾极速与高精度（低配 CPU 推荐）。
+  - `sensevoice` (进阶)：阿里强大的多模态语音模型，支持识别情感标签、BGM、多语种。
 
-## ✨ 特性
+## 📦 安装 (Installation)
 
-- 🚀 **极速转录** — SenseVoice 引擎，10秒音频处理仅需百毫秒级
-- 🤖 **Agent-Native** — 标准 JSON 输出，可被任何 AI Agent 框架直接解析
-- 🔌 **可插拔引擎** — 支持 SenseVoice (中文极速) 和 faster-whisper (多语言)
-- 💻 **纯 CPU 推理** — 无需 GPU，4核 CPU + 8GB RAM 即可运行
-- 📦 **零 LLM 依赖** — Skill 只做转录，润色交给 Agent
-- 🛡️ **生产级质量** — 完整错误处理、结构化日志、类型注解
+由于现代 Linux 环境引入了 PEP 668（externally-managed-environment），推荐使用 `pipx` 或在虚拟环境中安装本项目，以保持系统环境干净。
 
-## 📥 安装
-
-### 推荐安装 (SenseVoice 引擎，中文最快)
-
+### 先决条件
+请确保系统已安装 `ffmpeg`：
 ```bash
-pip install "douyin-to-text[sensevoice]"
-```
-
-### 备选安装 (faster-whisper 引擎，多语言)
-
-```bash
-pip install "douyin-to-text[whisper]"
-```
-
-### 全部安装
-
-```bash
-pip install "douyin-to-text[all]"
-```
-
-### 前置依赖
-
-- **Python** >= 3.10
-- **FFmpeg** — 必须已安装 ([安装指南](https://ffmpeg.org/download.html))
-
-```bash
-# Ubuntu/Debian
+sudo apt update
 sudo apt install ffmpeg
-
-# macOS
-brew install ffmpeg
 ```
 
-## 🚀 快速开始
-
-### 基本用法
-
+### 安装步骤
 ```bash
-# 转录抖音视频 (输出 JSON)
-douyin-to-text transcribe "https://v.douyin.com/xxxxxxx"
-
-# 输出 Markdown 格式
-douyin-to-text transcribe "https://v.douyin.com/xxxxxxx" --format markdown
-
-# 输出纯文本
-douyin-to-text transcribe "https://v.douyin.com/xxxxxxx" --format plain
-
-# 指定引擎
-douyin-to-text transcribe "https://v.douyin.com/xxxxxxx" --engine sensevoice
-
-# 保存到文件
-douyin-to-text transcribe "https://v.douyin.com/xxxxxxx" -o transcript.json
-```
-
-### 查看可用引擎
-
-```bash
-douyin-to-text engines
-```
-
-### 输出示例
-
-```json
-{
-  "status": "success",
-  "url": "https://www.douyin.com/video/7380000000000000000",
-  "title": "AI 编程效率提升 10 倍的秘密",
-  "author": "科技博主",
-  "duration_seconds": 65.3,
-  "engine": "sensevoice",
-  "language": "zh",
-  "transcript": "大家好，今天来聊一下如何用 AI 提升编程效率...",
-  "segments": [
-    {"start": 0.0, "end": 2.1, "text": "大家好"},
-    {"start": 2.1, "end": 5.8, "text": "今天来聊一下如何用 AI 提升编程效率"}
-  ],
-  "metadata": {
-    "model": "sensevoice-small",
-    "processing_time_seconds": 1.8,
-    "audio_duration_seconds": 65.3
-  }
-}
-```
-
-## 🤖 Agent 集成
-
-### 推荐工作流
-
-```
-Agent 收到抖音链接
-  → douyin-to-text transcribe <URL> --format json
-  → Agent 解析 JSON，提取 transcript
-  → Agent 润色、摘要、格式化
-  → Agent 写入 Obsidian / Notion / 笔记
-```
-
-### Agent Skill 文件
-
-项目根目录的 `SKILL.md` 文件包含了 Agent 所需的完整使用说明。将此项目路径添加到 Agent 的 skill 搜索路径即可自动发现。
-
-### Python API 调用
-
-```python
-from douyin_to_text.transcriber import transcribe_url
-
-result = transcribe_url(
-    url="https://v.douyin.com/xxxxxxx",
-    engine="auto",
-    language="auto",
-    output_format="json"
-)
-print(result)
-```
-
-## ⚡ 性能基准
-
-在 Intel i5-4210U (4核 1.7GHz, 12GB RAM, 纯 CPU) 上的实测性能：
-
-| 视频时长 | SenseVoice-Small | faster-whisper (base) |
-|:---|:---|:---|
-| 10s 短视频 | ~0.5s | ~3s |
-| 60s 中视频 | ~2s | ~15s |
-| 5min 长视频 | ~10s | ~60s |
-
-## 🏗️ 架构
-
-```
-douyin-to-text transcribe <URL>
-       │
-       ├── resolver      解析抖音短链接
-       ├── downloader     yt-dlp 提取音频 (WAV 16kHz)
-       ├── engines/       可插拔 ASR 引擎
-       │   ├── sensevoice     SenseVoice ONNX (优先)
-       │   └── faster_whisper CTranslate2 (备选)
-       └── output         格式化输出 (JSON/MD/Plain)
-```
-
-## 🧑‍💻 开发
-
-```bash
-# 克隆项目
-git clone https://github.com/y3275969734-arch/douyin-to-text.git
+git clone https://github.com/lemon/douyin-to-text.git
 cd douyin-to-text
+pipx install -e .[all]
+```
+*(注意：`[all]` 会同时安装 whisper 和 sensevoice 依赖。如果只需轻量使用，可改为 `.[whisper]`。)*
 
-# 安装开发依赖
-pip install -e ".[all,dev]"
+## 🛠 使用教程 (Usage)
 
-# 运行测试
-pytest tests/ -v
+直接在终端输入指令提取视频文案：
+
+```bash
+# 最简用法（默认使用 faster-whisper 的 base 模型，兼顾极速与精度）
+douyin-to-text transcribe "https://v.douyin.com/xxxxxx/"
+
+# 输出为 JSON 格式（适合 Agent 与代码调用）
+douyin-to-text transcribe "https://v.douyin.com/xxxxxx/" --format json
+
+# 指定使用 SenseVoice 引擎提取多模态情绪标签（首次运行会自动下载模型）
+douyin-to-text transcribe "https://v.douyin.com/xxxxxx/" --engine sensevoice
 ```
 
-## 📄 License
+### 参数选项
+- `--engine`: 指定推理引擎，可选 `faster-whisper` 或 `sensevoice`（默认：`faster-whisper`）。
+- `--model-size`: Whisper 引擎的模型大小，可选 `tiny`, `base`, `small`, `medium`, `large-v3-turbo`（默认：`base`）。
+- `--format`: 输出格式，可选 `markdown`, `json`, `plain`（默认：`markdown`）。
+- `--output-file`: 将结果直接写入指定文件。
 
-[MIT](LICENSE) — 自由使用、修改、分发。
+## 🧠 引擎选型指南
 
-## 🙏 致谢
+| 引擎 | 适用场景 | CPU 速度 | 准确度 | 是否掉字 | 特殊功能 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **faster-whisper** (默认) | 所有长短视频，笔记整理 | ⚡极快 | ⭐⭐⭐⭐⭐ | 绝对不会 | 极简环境依赖 |
+| **sensevoice** (进阶) | 短视频或需情绪分析 | 🐌一般 | ⭐⭐⭐⭐ | 很少（已内置分段算法） | 情绪、BGM识别 |
 
-- [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) — 阿里开源的高性能语音识别模型
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — CTranslate2 加速的 Whisper
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — 强大的视频/音频下载工具
+## 🤝 贡献与感谢
+本项目受 `yt-dlp`、`faster-whisper` 以及 `FunASR` 驱动，欢迎提交 Issue 与 PR 共同完善这个 Agent 小工具！
+
+## 📄 许可证
+MIT License
