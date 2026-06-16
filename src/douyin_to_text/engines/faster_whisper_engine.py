@@ -73,15 +73,23 @@ class FasterWhisperEngine(ASREngine):
         )
         t0 = time.monotonic()
 
-        raw_segments, info = model.transcribe(
-            audio_path,
-            language=lang,
-            beam_size=5,
-            vad_filter=True,
-            vad_parameters=dict(
+        transcribe_kwargs = {
+            "language": lang,
+            "beam_size": 5,
+            "vad_filter": True,
+            "vad_parameters": dict(
                 min_silence_duration_ms=500,
                 speech_pad_ms=400,
             ),
+        }
+        
+        # Force Simplified Chinese output for 'zh' or 'auto'
+        if lang == "zh" or lang is None:
+            transcribe_kwargs["initial_prompt"] = "以下是一段简体中文的普通话。"
+
+        raw_segments, info = model.transcribe(
+            audio_path,
+            **transcribe_kwargs
         )
 
         segments: list[Segment] = []
