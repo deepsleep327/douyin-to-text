@@ -52,25 +52,27 @@ def _format_json(
 ) -> str:
     """Produce a JSON string with full metadata."""
     data: dict = {
+        "status": "ok",
         "url": url,
-        "transcript": {
-            "text": result.text,
-            "language": result.language,
-            "engine": result.engine_name,
+        "title": download_info.title if download_info else "",
+        "author": download_info.author if download_info else "",
+        "duration_seconds": download_info.duration if download_info else result.audio_duration,
+        "engine": result.engine_name,
+        "language": result.language,
+        "transcript": result.text,
+        "full_text": result.text,
+        "segments": [asdict(s) for s in result.segments],
+        "metadata": {
             "model": result.model_name,
-            "audio_duration": result.audio_duration,
-            "processing_time": result.processing_time,
-            "segments": [asdict(s) for s in result.segments],
-        },
+            "processing_time_seconds": result.processing_time,
+            "audio_duration_seconds": result.audio_duration,
+        }
     }
     if download_info is not None:
-        data["metadata"] = {
-            "title": download_info.title,
-            "author": download_info.author,
-            "duration": download_info.duration,
+        data["metadata"].update({
             "description": download_info.description,
             "video_id": download_info.video_id,
-        }
+        })
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 

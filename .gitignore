@@ -1,8 +1,17 @@
 models/
 result*.md
+transcript_result.md
 .pytest_cache/
 __pycache__/
 *.pyc
 *.egg-info/
 dist/
 build/
+.venv/
+venv/
+.DS_Store
+*.log
+*.wav
+*.mp4
+.agents/
+skills-lock.json

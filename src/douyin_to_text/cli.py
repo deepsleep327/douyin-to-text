@@ -41,8 +41,10 @@ def _configure_logging(*, verbose: bool) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _emit_json(data: dict | list, file: TextIO = sys.stdout) -> None:
+def _emit_json(data: dict | list, file: TextIO | None = None) -> None:
     """Write *data* as compact UTF-8 JSON to *file*."""
+    if file is None:
+        file = sys.stdout
     click.echo(json.dumps(data, ensure_ascii=False, indent=2), file=file)
 
 
@@ -122,6 +124,11 @@ def main() -> None:
     default=False,
     help="Enable verbose (DEBUG) logging to stderr.",
 )
+@click.option(
+    "--cookies-from-browser",
+    default=None,
+    help="Extract cookies from browser (e.g. chrome, safari, firefox).",
+)
 def transcribe(  # noqa: WPS211 — many args by design (CLI surface)
     url: str,
     engine: str,
@@ -132,16 +139,18 @@ def transcribe(  # noqa: WPS211 — many args by design (CLI surface)
     keep_audio: bool,
     temp_dir: Path | None,
     verbose: bool,
+    cookies_from_browser: str | None,
 ) -> None:
     """Transcribe audio from a Douyin / TikTok video URL."""
     _configure_logging(verbose=verbose)
     logger.debug(
-        "transcribe called: url=%s engine=%s format=%s lang=%s model=%s",
+        "transcribe called: url=%s engine=%s format=%s lang=%s model=%s cookies=%s",
         url,
         engine,
         output_format,
         language,
         model_size,
+        cookies_from_browser,
     )
 
     try:
@@ -157,6 +166,7 @@ def transcribe(  # noqa: WPS211 — many args by design (CLI surface)
             fmt=output_format,
             keep_audio=keep_audio,
             temp_dir=temp_dir,
+            cookies_from_browser=cookies_from_browser,
         )
     except ImportError as exc:
         _emit_error(f"Missing dependency for engine '{engine}': {exc}")
@@ -173,24 +183,6 @@ def transcribe(  # noqa: WPS211 — many args by design (CLI surface)
         logger.info("Output written to %s", output_file)
     else:
         click.echo(output)
-
-
-def _format_result(result: dict, fmt: str) -> str:
-    """Serialize *result* dict into the requested format string."""
-    if fmt == "json":
-        return json.dumps(result, ensure_ascii=False, indent=2)
-    if fmt == "markdown":
-        parts: list[str] = [f"# {result.get('title', 'Transcription')}", ""]
-        for seg in result.get("segments", []):
-            start = seg.get("start", "")
-            text = seg.get("text", "")
-            parts.append(f"**[{start}]** {text}")
-        return "\n".join(parts)
-    # plain
-    return "\n".join(
-        seg.get("text", "") for seg in result.get("segments", [])
-    )
-
 
 # ---------------------------------------------------------------------------
 # engines

@@ -20,7 +20,8 @@ _LANG_MAP: dict[str, str] = {
 }
 
 import os
-MODEL_ID = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "models", "SenseVoiceSmall")
+_LOCAL_MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "models", "SenseVoiceSmall")
+MODEL_ID = _LOCAL_MODEL_DIR if os.path.isdir(_LOCAL_MODEL_DIR) else "iic/SenseVoiceSmall"
 
 
 class SenseVoiceEngine(ASREngine):
@@ -122,6 +123,7 @@ class SenseVoiceEngine(ASREngine):
 
         elapsed = time.monotonic() - t0
         full_text = " ".join(full_texts).strip()
+        detected_lang = language if language != "auto" else "zh"
 
         logger.info(
             "SenseVoice done in %.2fs — %d chars", elapsed, len(full_text)
